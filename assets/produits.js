@@ -6,14 +6,20 @@
    • Ajouter un produit : copiez un bloc { ... }, changez « id » (sans accent ni espace),
      le nom, le prix, la catégorie et les photos (déposées dans assets/img/).
    • Catégories possibles : "classic", "shamballa", "stones", "duo".
-   • Paiement en ligne (optionnel) : collez l'identifiant Chariow du produit dans « chariow »
-     (ex. "prd_ab12cd34"). Laissé vide, seul le bouton WhatsApp s'affiche.
+   • Paiement en ligne : bloc « fedapay » ci-dessous (lien Tap & Go + code USSD).
+     Pour couper le paiement en ligne, videz « lien » : seul WhatsApp (paiement à la livraison) reste.
+   • « chariow » : réservé aux futurs produits numériques (Chariow n'accepte pas les produits physiques).
    ========================================================================== */
 
 window.FORMIDABLE = {
   whatsapp: "2290198897942",            // numéro WhatsApp de la boutique (indicatif + numéro, sans +)
   whatsappAffiche: "+229 01 98 89 79 42",
-  chariowDomaine: "",                   // ex. "boutique.formidable.bj" quand la boutique Chariow est prête
+  fedapay: {
+    lien: "https://pos.fedapay.com/pay/00588",   // page de paiement (QR code Tap & Go)
+    ussd: "*601*14*00588*{montant}#",            // {montant} est remplacé par le total
+    beneficiaire: "HARMONIA COSMETICS"           // nom affiché par FedaPay au moment du paiement
+  },
+  chariowDomaine: "",                   // inutilisé pour les bracelets (produits physiques)
   produits: [
     {
       id: "shamballa-initiale",

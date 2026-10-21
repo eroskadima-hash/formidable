@@ -247,3 +247,31 @@ select,input[type=text],input[type=number]{min-height:44px;padding:0 14px;border
 @media (max-width:720px){.selects{display:grid;grid-template-columns:1fr 1fr}.selects select{width:100%}}
 .toast{bottom:auto;top:calc(86px + env(safe-area-inset-top,0px));transform:translate(-50%,-12px)}
 .toast.on{transform:translate(-50%,0)}
+
+/* paiement en ligne FedaPay */
+body.bloque{overflow:hidden}
+.paie{position:fixed;inset:0;z-index:120;background:rgba(30,26,22,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.paie[hidden]{display:none}
+.paie-boite{position:relative;background:var(--creme);border-radius:22px;width:min(480px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:30px 26px 24px;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+.paie-boite h2{font-size:34px;margin:6px 0 16px}
+.paie-x{position:absolute;top:14px;right:14px}
+.paie-montant{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#fff;border:1px solid var(--ligne);border-radius:16px;padding:14px 16px}
+.paie-montant span{font-size:13px;color:var(--texte2);width:100%}
+.paie-montant b{font:600 28px var(--f-titre);color:var(--charbon);flex:1}
+.paie-copier{border:1.5px solid var(--charbon);background:transparent;border-radius:999px;padding:8px 16px;font:500 14px var(--f-texte);cursor:pointer;color:var(--charbon)}
+.paie-etapes{list-style:none;counter-reset:e;padding:0;margin:20px 0 14px;display:grid;gap:20px}
+.paie-etapes>li{counter-increment:e;display:grid;gap:10px;padding-left:40px;position:relative}
+.paie-etapes>li::before{content:counter(e);position:absolute;left:0;top:0;width:28px;height:28px;border-radius:50%;background:var(--bronze);color:#fff;display:grid;place-items:center;font:600 14px var(--f-texte)}
+.paie-etapes small{font-size:13px;color:var(--texte2);line-height:1.5}
+.paie-etapes .btn{width:100%}
+.paie-ou{font-size:13px;color:var(--texte2)}
+.paie-ussd{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1.5px dashed var(--bronze);border-radius:14px;padding:12px 14px;text-decoration:none;color:var(--charbon)}
+.paie-ussd code{font:600 17px/1.2 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.02em;word-break:break-all}
+.paie-ussd span{font-size:13px;color:var(--bronze);font-weight:600;flex:none}
+.paie-ussd[hidden]{display:none}
+.paie-champ{display:grid;gap:6px;font-size:13px;color:var(--texte2)}
+.paie-champ input{min-height:46px;border:1px solid var(--ligne);border-radius:12px;padding:0 14px;font:400 16px var(--f-texte);background:#fff;color:var(--charbon)}
+.paie-boite .petit{font-size:12.5px;color:var(--texte2);line-height:1.5}
+.paie-note{font-size:13px;color:var(--texte2);margin-top:10px}
+.panier footer .btn[hidden]{display:none}
+@media (max-width:520px){.paie{align-items:flex-end;padding:0}.paie-boite{border-radius:22px 22px 0 0;max-height:92vh;padding:26px 18px 22px}.paie-boite h2{font-size:30px}}

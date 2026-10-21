@@ -25,12 +25,62 @@
   }
   function toast(t){ let el=$(".toast"); if(!el){el=document.createElement("div");el.className="toast";el.setAttribute("role","status");document.body.appendChild(el)} el.textContent=t; el.classList.add("on"); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove("on"),2200); }
   function lienWA(texte){ return "https://wa.me/" + F.whatsapp + "?text=" + encodeURIComponent(texte); }
-  function messagePanier(){
-    let total = 0, lignes = panier.map(l=>{ const p=P.find(x=>x.id===l.id); if(!p) return ""; total += p.prix*l.qte;
+  function lignesPanier(){
+    let total = 0; const lignes = panier.map(l=>{ const p=P.find(x=>x.id===l.id); if(!p) return ""; total += p.prix*l.qte;
       return "• " + p.nom + (l.options? " ("+l.options+")":"") + " × " + l.qte + " — " + fcfa(p.prix*l.qte); }).filter(Boolean);
-    return "Bonjour FORMIDABLE, je souhaite commander :\n" + lignes.join("\n") + "\n\nTotal : " + fcfa(total) +
-      "\n\nNom :\nQuartier / ville :\nLivraison ou retrait :";
+    return {lignes, total};
   }
+  const msgLivraison = (lignes,total) => "Bonjour FORMIDABLE, je souhaite commander :\n" + lignes.join("\n") + "\n\nTotal : " + fcfa(total) +
+      "\nPaiement : à la livraison\n\nNom :\nQuartier / ville :\nLivraison ou retrait :";
+  function messagePanier(){ const c=lignesPanier(); return msgLivraison(c.lignes,c.total); }
+
+  /* ---------- paiement en ligne FedaPay (lien Tap & Go + code USSD) ---------- */
+  const FP = F.fedapay && F.fedapay.lien ? F.fedapay : null;
+  let paieCourant = null;
+  function fenetrePaiement(){
+    let d = $("#paiement"); if(d) return d;
+    d = document.createElement("div"); d.id="paiement"; d.className="paie"; d.setAttribute("role","dialog"); d.setAttribute("aria-modal","true"); d.setAttribute("aria-labelledby","paieTitre"); d.hidden=true;
+    d.innerHTML = `<div class="paie-boite">
+      <button class="icone paie-x" type="button" data-paie-fermer aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <p class="eyebrow">Paiement sécurisé FedaPay</p>
+      <h2 id="paieTitre">Payer maintenant</h2>
+      <div class="paie-montant"><span>Montant à payer</span><b id="paieMontant"></b><button type="button" class="paie-copier" data-copier>Copier</button></div>
+      <ol class="paie-etapes">
+        <li><b>Paie avec Mobile Money ou carte</b>
+          <a class="btn bronze" id="paieLien" href="${FP?FP.lien:"#"}" target="_blank" rel="noopener">Ouvrir la page de paiement</a>
+          <small>Sur la page qui s’ouvre, saisis le montant <b data-montant-txt></b> et ton nom, puis choisis MTN, Moov, Celtiis ou carte.</small>
+          <span class="paie-ou">ou, depuis n’importe quel téléphone, compose :</span>
+          <a class="paie-ussd" id="paieUssd" href="#"><code id="paieCode"></code><span>Composer</span></a>
+        </li>
+        <li><b>Envoie-nous ta commande</b>
+          <label class="paie-champ"><span>Nom utilisé pour payer</span><input id="paieNom" type="text" autocomplete="name" placeholder="Ex : DOSSOU Jean"></label>
+          <a class="btn wa" id="paieWA" href="#" target="_blank" rel="noopener">${ICON_WA} J’ai payé, j’envoie ma commande</a>
+        </li>
+      </ol>
+      <p class="petit">Le bénéficiaire affiché lors du paiement est <b>${FP?esc(FP.beneficiaire||""):""}</b>, le compte de paiement de FORMIDABLE. Les frais de livraison éventuels sont confirmés sur WhatsApp.</p>
+    </div>`;
+    document.body.appendChild(d);
+    const maj = () => { if(!paieCourant) return; const nom=$("#paieNom").value.trim();
+      $("#paieWA").href = lienWA("Bonjour FORMIDABLE, je viens de payer ma commande en ligne :\n" + paieCourant.lignes.join("\n") +
+        "\n\nTotal payé : " + fcfa(paieCourant.total) + " via FedaPay" + (nom? "\nNom utilisé pour le paiement : "+nom : "\nNom utilisé pour le paiement :") +
+        "\n\nQuartier / ville :\nLivraison ou retrait :"); };
+    $("#paieNom").addEventListener("input", maj);
+    d.addEventListener("click", e=>{
+      if(e.target===d || e.target.closest("[data-paie-fermer]")) fermerPaiement();
+      const c=e.target.closest("[data-copier]"); if(c && paieCourant){ const t=String(paieCourant.total);
+        (navigator.clipboard? navigator.clipboard.writeText(t) : Promise.reject()).then(()=>{c.textContent="Copié ✓"; setTimeout(()=>c.textContent="Copier",1800)}).catch(()=>toast("Montant : "+t)); }
+    });
+    d._maj = maj; return d;
+  }
+  function ouvrirPaiement(lignes,total){
+    if(!FP || !lignes.length) return;
+    paieCourant = {lignes,total}; const d=fenetrePaiement();
+    $("#paieMontant").textContent = fcfa(total); $$("[data-montant-txt]",d).forEach(e=>e.textContent=fcfa(total));
+    const code = (FP.ussd||"").replace("{montant}", total);
+    $("#paieCode").textContent = code; $("#paieUssd").href = "tel:" + code.replace(/#/g,"%23"); $("#paieUssd").hidden = !code;
+    d._maj(); ouvrirPanier(false); d.hidden=false; document.body.classList.add("bloque"); setTimeout(()=>$(".paie-x",d).focus(),30);
+  }
+  function fermerPaiement(){ const d=$("#paiement"); if(d && !d.hidden){ d.hidden=true; document.body.classList.remove("bloque"); } }
   function majPanier(){
     const n = panier.reduce((a,l)=>a+l.qte,0);
     $$(".compteur").forEach(c=>{c.textContent=n||"";c.dataset.n=n});
@@ -44,9 +94,11 @@
     $("#panierTotal").textContent = fcfa(total);
     const b = $("#panierCommander"); b.href = lienWA(messagePanier()); b.toggleAttribute("disabled", !panier.length);
     if(!panier.length) b.setAttribute("aria-disabled","true"); else b.removeAttribute("aria-disabled");
+    const pp = $("#panierPayer"); if(pp){ pp.hidden = !FP; pp.disabled = !panier.length; }
   }
   function ouvrirPanier(o){ $(".panier").classList.toggle("ouvert",o); $(".voile").classList.toggle("ouvert",o); $(".panier").setAttribute("aria-hidden",!o); if(o) $(".panier .icone").focus(); }
   document.addEventListener("click", e=>{
+    if(e.target.closest("#panierPayer")){ const c=lignesPanier(); ouvrirPaiement(c.lignes,c.total); return; }
     const t = e.target.closest("[data-ajout],[data-moins],[data-plus],[data-suppr],[data-panier],.voile,#fermerPanier,#menuBtn");
     if(!t) return;
     if(t.dataset.ajout){ e.preventDefault(); const p=P.find(x=>x.id===t.dataset.ajout); if(p && (p.initiales || p.composition)){ location.href = racine+"produit/?m="+p.id; return; } ajouter(t.dataset.ajout); }
@@ -57,7 +109,7 @@
     else if(t.classList.contains("voile") || t.id==="fermerPanier"){ ouvrirPanier(false); }
     else if(t.id==="menuBtn"){ const n=$(".nav"); const o=!n.classList.contains("ouvert"); n.classList.toggle("ouvert",o); t.setAttribute("aria-expanded",o); }
   });
-  document.addEventListener("keydown", e=>{ if(e.key==="Escape") ouvrirPanier(false); });
+  document.addEventListener("keydown", e=>{ if(e.key==="Escape"){ ouvrirPanier(false); fermerPaiement(); } });
 
   /* ---------- cartes ---------- */
   function carte(p){
@@ -109,14 +161,17 @@
         <div class="actions-fiche">
           <a class="btn wa" id="cmdWA" href="#" target="_blank" rel="noopener">${ICON_WA} Commander sur WhatsApp</a>
           <button class="btn" type="button" id="ajoutP" ${p.stock==="epuise"?"disabled":""}>Ajouter au panier</button>
-          ${p.chariow && F.chariowDomaine?`<button class="btn bronze js-pay" type="button">Payer en ligne (Mobile Money / carte)</button>`:""}
+          ${FP?`<button class="btn bronze" type="button" id="payerP" ${p.stock==="epuise"?"disabled":""}>Payer en ligne maintenant</button>`:(p.chariow && F.chariowDomaine?`<button class="btn bronze js-pay" type="button">Payer en ligne (Mobile Money / carte)</button>`:"")}
         </div>
+        <p class="paie-note">${FP?"Paie maintenant en ligne, ou commande sur WhatsApp et paie à la livraison.":"Commande sur WhatsApp, paiement à la livraison."}</p>
         <dl class="matieres">${p.matieres.map(m=>`<div><dt>${esc(m[0])}</dt><dd>${esc(m[1])}</dd></div>`).join("")}<div><dt>Couleur</dt><dd>${p.couleur==="noir"?"Noir":"Marron miel"}</dd></div></dl>
         <p class="note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 7h13l5 5v5h-3"/><path d="M3 7v10h2"/><circle cx="8" cy="17" r="2"/><circle cx="18" cy="17" r="2"/><path d="M10 17h6"/></svg> Livraison au Bénin. Frais et délai confirmés sur WhatsApp avant validation de votre commande.</p>
       </div>`;
     const fil=$("#filNom"); if(fil) fil.textContent=p.nom;
     let qte=1; const opt=()=>{ const o=[]; if(p.initiales){ o.push((p.initiales>1?"initiales ":"initiale ")+[1,2].slice(0,p.initiales).map(n=>$("#ini"+n).value).join(" + ")); } if(p.composition) o.push($("#compo").value); return o.join(", "); };
-    const majWA=()=>{ $("#qVal").textContent=qte; $("#cmdWA").href = lienWA("Bonjour FORMIDABLE, je souhaite commander :\n• "+p.nom+(opt()?" ("+opt()+")":"")+" × "+qte+" — "+fcfa(p.prix*qte)+"\n\nNom :\nQuartier / ville :\nLivraison ou retrait :"); };
+    const ligneF=()=>"• "+p.nom+(opt()?" ("+opt()+")":"")+" × "+qte+" — "+fcfa(p.prix*qte);
+    const majWA=()=>{ $("#qVal").textContent=qte; $("#cmdWA").href = lienWA(msgLivraison([ligneF()], p.prix*qte)); };
+    const bp=$("#payerP"); if(bp) bp.onclick=()=>ouvrirPaiement([ligneF()], p.prix*qte);
     $("#qMoins").onclick=()=>{qte=Math.max(1,qte-1);majWA()}; $("#qPlus").onclick=()=>{qte=Math.min(20,qte+1);majWA()};
     $$("select",fiche).forEach(s=>s.addEventListener("change",majWA));
     $("#ajoutP").onclick=()=>{ ajouter(p.id,qte,opt()); };
