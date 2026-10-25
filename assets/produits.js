@@ -12,8 +12,8 @@
    ========================================================================== */
 
 window.FORMIDABLE = {
-  whatsapp: "2290198897942",            // numéro WhatsApp de la boutique (indicatif + numéro, sans +)
-  whatsappAffiche: "+229 01 98 89 79 42",
+  whatsapp: "2290153300376",            // numéro WhatsApp de la boutique (indicatif + numéro, sans +)
+  whatsappAffiche: "+229 01 53 30 03 76",
   fedapay: {
     lien: "https://pos.fedapay.com/pay/00588",   // page de paiement (QR code Tap & Go)
     ussd: "*601*14*00588*{montant}#",            // {montant} est remplacé par le total
